@@ -1,554 +1,297 @@
-import { logger } from '../utils/logger.js';
+
+import {
+  Client,
+  GatewayIntentBits,
+  Collection,
+  EmbedBuilder,
+  ActionRowBuilder,
+  StringSelectMenuBuilder,
+  ActivityType,
+} from "discord.js";
+import fs from "node:fs";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 // ==========================================
-// ZYRON BOT — MAIN CONFIGURATION
+// ZYRON BOT CONFIGURATION
 // ==========================================
 
-export const botConfig = {
-  // BOT IDENTITY & PRESENCE
-  branding: {
-    name: "Zyron",
-    developer: "Zyron Development",
-    website: null,
-    supportServer: null,
-  },
+const PREFIX = process.env.PREFIX || "!";
+const BOT_NAME = "Zyron";
+const DEVELOPER = "Zyron Development";
+const COLOR = 0x8B5CF6;
 
-  presence: {
-    status: "dnd",
-    activities: [
-      {
-        name: "Custom Status",
-        state: "Zyron | .help",
-        type: 4,
-      },
-    ],
-  },
+const client = new Client({
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent,
+  ],
+});
 
-  // COMMAND SETTINGS
-  commands: {
-    owners: (process.env.OWNER_IDS || "")
-      .split(",")
-      .map((id) => id.trim())
-      .filter(Boolean),
+client.commands = new Collection();
 
-    defaultCooldown: 3,
-    deleteCommands: false,
-    testGuildId: process.env.TEST_GUILD_ID,
-    maintenanceMode:
-      process.env.MAINTENANCE_MODE === "true",
-    prefix: process.env.PREFIX || ".",
-  },
-
-  // APPLICATION SYSTEM
-  applications: {
-    defaultQuestions: [
-      { question: "What is your name?", required: true },
-      { question: "What is your Discord username?", required: true },
-      { question: "Why do you want to join our team?", required: true },
-      { question: "What experience do you have?", required: true },
-    ],
-
-    statusColors: {
-      pending: "#F1C40F",
-      approved: "#57F287",
-      denied: "#ED4245",
-    },
-
-    applicationCooldown: 24,
-    deleteDeniedAfter: 7,
-    deleteApprovedAfter: 30,
-    managerRoles: [],
-  },
-
-  // ZYRON BRAND COLORS
-  embeds: {
-    colors: {
-      primary: "#8B5CF6",
-      secondary: "#1E1B2E",
-
-      success: "#57F287",
-      error: "#ED4245",
-      warning: "#FEE75C",
-      info: "#38BDF8",
-
-      light: "#FFFFFF",
-      dark: "#111018",
-      gray: "#A1A1AA",
-
-      blurple: "#5865F2",
-      green: "#57F287",
-      yellow: "#FEE75C",
-      fuchsia: "#EB459E",
-      red: "#ED4245",
-      black: "#000000",
-
-      giveaway: {
-        active: "#57F287",
-        ended: "#ED4245",
-      },
-
-      ticket: {
-        open: "#57F287",
-        claimed: "#F59E0B",
-        closed: "#ED4245",
-        pending: "#A1A1AA",
-      },
-
-      economy: "#A78BFA",
-      birthday: "#EC4899",
-      moderation: "#8B5CF6",
-
-      priority: {
-        none: "#95A5A6",
-        low: "#38BDF8",
-        medium: "#2ECC71",
-        high: "#F1C40F",
-        urgent: "#ED4245",
-      },
-    },
-
-    footer: {
-      text: "Zyron Development",
-      icon: null,
-    },
-
-    thumbnail: null,
-
-    author: {
-      name: "Zyron",
-      icon: null,
-      url: null,
-    },
-  },
-
-  // ECONOMY
-  economy: {
-    currency: {
-      name: "Zyron Coin",
-      namePlural: "Zyron Coins",
-      symbol: "ZC",
-    },
-
-    startingBalance: 0,
-    baseBankCapacity: 100000,
-    dailyAmount: 100,
-
-    workMin: 10,
-    workMax: 100,
-    begMin: 5,
-    begMax: 50,
-
-    cooldowns: {
-      daily: 24 * 60 * 60 * 1000,
-      work: 60 * 60 * 1000,
-      crime: 2 * 60 * 60 * 1000,
-      rob: 4 * 60 * 60 * 1000,
-    },
-
-    robSuccessRate: 0.4,
-    robFailJailTime: 60 * 60 * 1000,
-  },
-
-  shop: {},
-
-  // TICKETS
-  tickets: {
-    defaultCategory: null,
-    supportRoles: [],
-
-    priorities: {
-      none: {
-        emoji: "⚪",
-        color: "#95A5A6",
-        label: "None",
-      },
-      low: {
-        emoji: "🟢",
-        color: "#2ECC71",
-        label: "Low",
-      },
-      medium: {
-        emoji: "🟡",
-        color: "#F1C40F",
-        label: "Medium",
-      },
-      high: {
-        emoji: "🔴",
-        color: "#E74C3C",
-        label: "High",
-      },
-      urgent: {
-        emoji: "🚨",
-        color: "#E91E63",
-        label: "Urgent",
-      },
-    },
-
-    defaultPriority: "none",
-    archiveCategory: null,
-    logChannel: null,
-  },
-
-  // GIVEAWAYS
-  giveaways: {
-    defaultDuration: 24 * 60 * 60 * 1000,
-    minimumWinners: 1,
-    maximumWinners: 10,
-    minimumDuration: 5 * 60 * 1000,
-    maximumDuration: 30 * 24 * 60 * 60 * 1000,
-    allowedRoles: [],
-    bypassRoles: [],
-  },
-
-  // BIRTHDAYS
-  birthday: {
-    defaultRole: null,
-    announcementChannel: null,
-    timezone: "Asia/Kolkata",
-  },
-
-  // VERIFICATION
-  verification: {
-    defaultMessage:
-      "Welcome to Zyron! Click below to verify your account.",
-    defaultButtonText: "Verify",
-
-    autoVerify: {
-      defaultCriteria: "account_age",
-      defaultAccountAgeDays: 7,
-      serverSizeThreshold: 1000,
-      minAccountAge: 1,
-      maxAccountAge: 365,
-      sendDMNotification: true,
-
-      criteria: {
-        account_age:
-          "Account must be older than the specified number of days",
-        server_size:
-          "Automatic verification for smaller servers",
-        none: "All users immediately",
-      },
-    },
-
-    verificationCooldown: 5000,
-    maxVerificationAttempts: 3,
-    attemptWindow: 60000,
-    maxCooldownEntries: 10000,
-    maxAttemptEntries: 10000,
-    cooldownCleanupInterval: 300000,
-    maxAuditMetadataBytes: 4096,
-    maxInMemoryAuditEntries: 1000,
-    logAllVerifications: true,
-    keepAuditTrail: true,
-  },
-
-  // WELCOME & GOODBYE
-  welcome: {
-    defaultWelcomeMessage:
-      "Welcome {user} to **{server}**! You are member #{memberCount}. Enjoy your stay with Zyron!",
-
-    defaultGoodbyeMessage:
-      "{user} has left **{server}**. Current members: {memberCount}.",
-
-    defaultWelcomeChannel: null,
-    defaultGoodbyeChannel: null,
-  },
-
-  // SERVER COUNTERS
-  counters: {
-    defaults: {
-      name: "{name} Counter",
-      description: "Zyron server {name} counter",
-      type: "voice",
-      channelName: "{name}-{count}",
-    },
-
-    permissions: {
-      deny: ["VIEW_CHANNEL"],
-      allow: ["VIEW_CHANNEL", "CONNECT", "SPEAK"],
-    },
-
-    messages: {
-      created: "✅ Created counter **{name}**",
-      deleted: "🗑️ Deleted counter **{name}**",
-      updated: "🔄 Updated counter **{name}**",
-    },
-
-    types: {
-      members: {
-        name: "👥 Members",
-        description: "Total server members",
-        getCount: (guild) => guild.memberCount.toString(),
-      },
-
-      bots: {
-        name: "🤖 Bots",
-        description: "Total bot accounts",
-        getCount: (guild) =>
-          guild.members.cache.filter((m) => m.user.bot)
-            .size.toString(),
-      },
-
-      members_only: {
-        name: "👤 Humans",
-        description: "Total human members",
-        getCount: (guild) =>
-          guild.members.cache.filter((m) => !m.user.bot)
-            .size.toString(),
-      },
-    },
-  },
-
-  // DEFAULT MESSAGES
-  messages: {
-    noPermission:
-      "You do not have permission to use this command.",
-    cooldownActive:
-      "Please wait {time} before using this command again.",
-    errorOccurred:
-      "An error occurred while executing this command.",
-    missingPermissions:
-      "Zyron is missing the required Discord permissions.",
-    commandDisabled:
-      "This command is currently disabled.",
-    maintenanceMode:
-      "Zyron is currently under maintenance. Please try again later.",
-  },
-
-  // FEATURE TOGGLES
-  features: {
-    economy: true,
-    leveling: true,
-    moderation: true,
-    logging: true,
-    welcome: true,
-
-    tickets: true,
-    giveaways: true,
-    birthday: true,
-    counter: true,
-
-    verification: true,
-    reactionRoles: true,
-    joinToCreate: true,
-
-    voice: true,
-    search: true,
-    tools: true,
-    utility: true,
-    community: true,
-    fun: true,
-    music: true,
-  },
-};
+const categories = [
+  { name: "Security", emoji: "🛡️", description: "Shows the security commands" },
+  { name: "Permit Commands", emoji: "👑", description: "Shows the permit commands" },
+  { name: "Automod", emoji: "🤖", description: "Shows the automod commands" },
+  { name: "Moderation", emoji: "🛠️", description: "Shows the moderation commands" },
+  { name: "General", emoji: "👻", description: "Shows the general commands" },
+  { name: "Verification", emoji: "🔺", description: "Shows the verification commands" },
+  { name: "Utility", emoji: "⚙️", description: "Shows the utility commands" },
+  { name: "Automations", emoji: "🔗", description: "Shows the automation commands" },
+  { name: "Autoresponders", emoji: "♡", description: "Shows the autoresponder commands" },
+  { name: "Vanity & Tags", emoji: "🌱", description: "Shows the vanity and tag commands" },
+  { name: "Greetings", emoji: "🚪", description: "Shows the greeting commands" },
+  { name: "Music", emoji: "🎵", description: "Shows the music commands" },
+  { name: "Fun Commands", emoji: "⚛️", description: "Shows the fun commands" },
+  { name: "CustomRole", emoji: "✋", description: "Shows the custom role commands" },
+  { name: "Voice Commands", emoji: "🔊", description: "Shows the voice commands" },
+  { name: "Tickets", emoji: "🎟️", description: "Shows the ticket commands" },
+  { name: "Logging", emoji: "🦇", description: "Shows the logging commands" },
+  { name: "Voice Master", emoji: "🔈", description: "Shows the voice master commands" },
+  { name: "Bot Settings", emoji: "📶", description: "Shows the bot setting commands" },
+];
 
 // ==========================================
-// CONFIG VALIDATION
+// LOAD PREFIX COMMANDS
+// Expected structure:
+// commands/general/ping.js
+// commands/moderation/ban.js
 // ==========================================
 
-export function validateConfig(config) {
-  const errors = [];
-
-  if (process.env.NODE_ENV !== "production") {
-    logger.debug("Environment variables check:");
-    logger.debug(
-      "DISCORD_TOKEN exists:",
-      !!(process.env.DISCORD_TOKEN || process.env.TOKEN),
-    );
-    logger.debug("CLIENT_ID exists:", !!process.env.CLIENT_ID);
-    logger.debug("NODE_ENV:", process.env.NODE_ENV);
+async function loadCommands(directory) {
+  if (!fs.existsSync(directory)) {
+    console.warn("Commands folder not found:", directory);
+    return;
   }
 
-  if (!process.env.DISCORD_TOKEN && !process.env.TOKEN) {
-    errors.push(
-      "Bot token is required (DISCORD_TOKEN or TOKEN)",
-    );
-  }
+  const files = fs.readdirSync(directory, { withFileTypes: true });
 
-  if (!process.env.CLIENT_ID) {
-    errors.push("CLIENT_ID environment variable is required");
-  }
+  for (const file of files) {
+    const fullPath = path.join(directory, file.name);
 
-  if (process.env.NODE_ENV === "production") {
-    const hasConnectionUrl = Boolean(
-      process.env.POSTGRES_URL ||
-      process.env.DATABASE_URL,
-    );
+    if (file.isDirectory()) {
+      await loadCommands(fullPath);
+      continue;
+    }
 
-    if (!hasConnectionUrl) {
-      if (!process.env.POSTGRES_HOST) {
-        errors.push("PostgreSQL host is required");
+    if (!file.name.endsWith(".js")) continue;
+
+    try {
+      const module = await import(pathToFileURL(fullPath).href);
+      const command = module.default ?? module;
+
+      if (!command.name || typeof command.execute !== "function") {
+        console.warn(`Skipped invalid command: ${file.name}`);
+        continue;
       }
-      if (!process.env.POSTGRES_USER) {
-        errors.push("PostgreSQL user is required");
+
+      command.category ??=
+        path.basename(path.dirname(fullPath));
+
+      client.commands.set(command.name.toLowerCase(), command);
+
+      for (const alias of command.aliases ?? []) {
+        client.commands.set(alias.toLowerCase(), command);
       }
-      if (!process.env.POSTGRES_PASSWORD) {
-        errors.push("PostgreSQL password is required");
-      }
+    } catch (error) {
+      console.error(`Failed loading ${file.name}:`, error);
     }
   }
 
-  return errors;
+  console.log(`Loaded ${client.commands.size} command names/aliases.`);
 }
 
-const configErrors = validateConfig(botConfig);
+// ==========================================
+// HELP EMBED
+// ==========================================
 
-if (configErrors.length > 0) {
-  logger.error(
-    "Zyron configuration errors:",
-    configErrors.join("\n"),
+function createHelpEmbed(clientUser) {
+  const embed = new EmbedBuilder()
+    .setColor(COLOR)
+    .setAuthor({
+      name: `Hey, I'm ${BOT_NAME}`,
+      iconURL: clientUser.displayAvatarURL(),
+    })
+    .setDescription(
+      [
+        `• My prefix for this server is \`${PREFIX}\``,
+        `• Type \`${PREFIX}help [category]\` for more`,
+        `• Total commands: **${new Set(client.commands.values()).size}**`,
+        "",
+        ...categories.map(
+          (category) =>
+            `${category.emoji} » **${category.name}**`
+        ),
+        "",
+        "**Pro Tip**",
+        `Use \`${PREFIX}help moderation\` to explore a category!`,
+        "",
+        "↗ **Links**",
+        "[Invite me](https://discord.com/developers/applications) • [Support](https://discord.com) • [Website](https://discord.com)",
+      ].join("\n")
+    )
+    .setThumbnail(clientUser.displayAvatarURL())
+    .setFooter({ text: `Powered By ${DEVELOPER}` });
+
+  return embed;
+}
+
+function createCategoryMenu() {
+  const menu = new StringSelectMenuBuilder()
+    .setCustomId("zyron_help_category")
+    .setPlaceholder("Select a module to see")
+    .addOptions(
+      categories.map((category) => ({
+        label: category.name,
+        description: category.description,
+        value: category.name,
+        emoji: category.emoji,
+      }))
+    );
+
+  return new ActionRowBuilder().addComponents(menu);
+}
+
+function createCategoryEmbed(categoryName) {
+  const category = categories.find(
+    (item) => item.name.toLowerCase() === categoryName.toLowerCase()
   );
 
-  if (process.env.NODE_ENV === "production") {
-    process.exit(1);
-  }
-}
+  const commands = [
+    ...new Set(client.commands.values()),
+  ].filter((command) => {
+    const commandCategory = String(command.category ?? "")
+      .replace(/[_-]/g, " ")
+      .toLowerCase();
 
-export const BotConfig = botConfig;
-
-// ==========================================
-// COMMAND CATEGORY MAPPING
-// ==========================================
-
-const COMMAND_CATEGORY_FEATURE_MAP = {
-  birthday: "birthday",
-  community: "community",
-  economy: "economy",
-  fun: "fun",
-  giveaway: "giveaways",
-  jointocreate: "joinToCreate",
-  leveling: "leveling",
-  logging: "logging",
-  moderation: "moderation",
-  music: "music",
-  reaction_roles: "reactionRoles",
-  search: "search",
-  serverstats: "counter",
-  ticket: "tickets",
-  tools: "tools",
-  utility: "utility",
-  verification: "verification",
-  welcome: "welcome",
-};
-
-function normalizeCategoryKey(category) {
-  return String(category || "")
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, "_");
-}
-
-export function getCommandPrefix() {
-  return botConfig.commands?.prefix ?? ".";
-}
-
-export function getBotOwners() {
-  return (botConfig.commands?.owners ?? [])
-    .map((id) => String(id).trim())
-    .filter(Boolean);
-}
-
-export function isBotOwner(userId) {
-  if (!userId) return false;
-  return getBotOwners().includes(String(userId));
-}
-
-export function isMaintenanceMode() {
-  return botConfig.commands?.maintenanceMode === true;
-}
-
-export function getBotMessage(key, replacements = {}) {
-  let message = botConfig.messages?.[key] || key;
-
-  for (const [placeholder, value] of Object.entries(replacements)) {
-    message = message.replace(
-      new RegExp(`\\{${placeholder}\\}`, "g"),
-      String(value),
+    return (
+      commandCategory === categoryName.replace(/[_-]/g, " ").toLowerCase() ||
+      commandCategory === categoryName.toLowerCase()
     );
-  }
+  });
 
-  return message;
+  const embed = new EmbedBuilder()
+    .setColor(COLOR)
+    .setTitle(`${category?.emoji ?? "📂"} ${categoryName}`)
+    .setDescription(
+      commands.length
+        ? commands
+            .map(
+              (command) =>
+                `\`${PREFIX}${command.name}\` — ${
+                  command.description ?? "No description available"
+                }`
+            )
+            .join("\n")
+        : "No commands are registered in this category yet."
+    )
+    .setFooter({ text: `${BOT_NAME} • ${DEVELOPER}` });
+
+  return embed;
 }
 
-export function isFeatureEnabled(featureKey) {
-  if (!featureKey) return true;
-  return botConfig.features?.[featureKey] !== false;
-}
+// ==========================================
+// BOT READY
+// ==========================================
 
-export function isCommandCategoryEnabled(category) {
-  const normalized = normalizeCategoryKey(category);
+client.once("ready", () => {
+  console.log(`${client.user.tag} is online!`);
 
-  if (!normalized || normalized === "core") return true;
+  client.user.setPresence({
+    activities: [
+      {
+        name: `${BOT_NAME} | ${PREFIX}help`,
+        type: ActivityType.Playing,
+      },
+    ],
+    status: "online",
+  });
+});
 
-  const featureKey = COMMAND_CATEGORY_FEATURE_MAP[normalized];
+// ==========================================
+// PREFIX COMMAND HANDLER
+// ==========================================
 
-  if (!featureKey) return true;
-  return isFeatureEnabled(featureKey);
-}
+client.on("messageCreate", async (message) => {
+  if (message.author.bot || !message.guild) return;
+  if (!message.content.startsWith(PREFIX)) return;
 
-export function getApplicationStatusColor(status) {
-  const colors = botConfig.applications?.statusColors || {};
-  const hex = colors[status];
+  const args = message.content.slice(PREFIX.length).trim().split(/\s+/);
+  const commandName = args.shift()?.toLowerCase();
 
-  return hex
-    ? getColor(hex)
-    : getColor(
-        status === "approved"
-          ? "success"
-          : status === "denied"
-            ? "error"
-            : "warning",
+  if (!commandName) return;
+
+  // !help
+  if (commandName === "help") {
+    const categoryName = args.join(" ").trim();
+
+    if (categoryName) {
+      const category = categories.find(
+        (item) => item.name.toLowerCase() === categoryName.toLowerCase()
       );
-}
 
-export function getDefaultApplicationQuestions() {
-  return (botConfig.applications?.defaultQuestions || [])
-    .map((entry) =>
-      typeof entry === "string" ? entry : entry.question,
-    )
-    .filter(Boolean);
-}
+      if (!category) {
+        return message.reply(
+          `Unknown category. Try \`${PREFIX}help\` to see all modules.`
+        );
+      }
 
-export function getColor(path, fallback = "#99AAB5") {
-  if (typeof path === "number") return path;
+      return message.reply({
+        embeds: [createCategoryEmbed(category.name)],
+      });
+    }
 
-  if (typeof path === "string" && path.startsWith("#")) {
-    return parseInt(path.slice(1), 16);
+    return message.reply({
+      embeds: [createHelpEmbed(client.user)],
+      components: [createCategoryMenu()],
+    });
   }
 
-  const result = String(path || "")
-    .split(".")
-    .reduce(
-      (obj, key) =>
-        obj && obj[key] !== undefined ? obj[key] : fallback,
-      botConfig.embeds.colors,
-    );
+  const command = client.commands.get(commandName);
+  if (!command) return;
 
-  if (typeof result === "string" && result.startsWith("#")) {
-    return parseInt(result.slice(1), 16);
+  try {
+    await command.execute(message, args, client);
+  } catch (error) {
+    console.error(`Command ${commandName} failed:`, error);
+    await message.reply("❌ An error occurred while running that command.");
   }
+});
 
-  return result;
+// ==========================================
+// SELECT MENU HANDLER
+// ==========================================
+
+client.on("interactionCreate", async (interaction) => {
+  if (!interaction.isStringSelectMenu()) return;
+  if (interaction.customId !== "zyron_help_category") return;
+
+  const categoryName = interaction.values[0];
+
+  await interaction.reply({
+    embeds: [createCategoryEmbed(categoryName)],
+    ephemeral: true,
+  });
+});
+
+// ==========================================
+// LOAD COMMANDS AND LOGIN
+// ==========================================
+
+const commandsDirectory = path.join(process.cwd(), "commands");
+
+await loadCommands(commandsDirectory);
+
+const token = process.env.DISCORD_TOKEN || process.env.TOKEN;
+
+if (!token) {
+  console.error("Missing DISCORD_TOKEN or TOKEN in your .env file.");
+  process.exit(1);
 }
 
-export function getRandomColor() {
-  const colors = Object.values(botConfig.embeds.colors)
-    .flatMap((color) =>
-      typeof color === "string"
-        ? [color]
-        : Object.values(color).filter(
-            (value) => typeof value === "string",
-          ),
-    )
-    .filter(
-      (color) =>
-        typeof color === "string" &&
-        /^#[0-9A-Fa-f]{6}$/.test(color),
-    );
-
-  return colors[
-    Math.floor(Math.random() * colors.length)
-  ] || botConfig.embeds.colors.primary;
-}
-
-export default botConfig;
+await client.login(token);
